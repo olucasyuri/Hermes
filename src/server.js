@@ -8,10 +8,6 @@ const http = require('http');
 const { buildEscalaMessage, buildAlmocoMessage } = require('./utils/messageBuilder');
 const { channels } = require('./config/config');
 
-/**
- * Inicia o servidor HTTP do Hermes
- * @param {import('discord.js').Client} client
- */
 function startServer(client) {
   const PORT = process.env.PORT || 3001;
   const API_SECRET = process.env.API_SECRET || '';
@@ -27,17 +23,17 @@ function startServer(client) {
       res.writeHead(204); res.end(); return;
     }
 
-    // ── Auth ──────────────────────────────────────────
-    if (API_SECRET && req.headers['x-api-secret'] !== API_SECRET) {
-      res.writeHead(401, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Não autorizado' }));
-      return;
-    }
-
-    // ── Health check (usado pelo Vercel Cron) ─────────
+    // ── Health check (público — não exige auth) ───────
     if (req.method === 'GET' && req.url === '/health') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ status: 'ok', bot: client.user?.tag || 'conectando...' }));
+      return;
+    }
+
+    // ── Auth (todas as outras rotas exigem) ───────────
+    if (API_SECRET && req.headers['x-api-secret'] !== API_SECRET) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Não autorizado' }));
       return;
     }
 
@@ -87,17 +83,14 @@ function startServer(client) {
         try {
           const { almocoState } = JSON.parse(body);
 
-          // Reconstrói lista de colaboradores marcados com os horários ajustados
           const { COLABORADORES } = require('./config/colaboradores');
           let lista;
 
           if (almocoState) {
-            // Enriquece com horários personalizados do site
             lista = COLABORADORES
               .filter(c => almocoState[c.nome]?.done)
               .map(c => ({ ...c, almoco: almocoState[c.nome]?.horario || c.almoco }));
           } else {
-            // Fallback: usa todos os colaboradores com horários padrão
             lista = COLABORADORES;
           }
 
