@@ -1,12 +1,21 @@
 // ════════════════════════════════════════════════════════
 //  HERMES — Servidor HTTP
-//  Recebe chamadas do Site (Vercel) e do Cron
-//  Adicione este arquivo em: src/server.js
+//  src/server.js
 // ════════════════════════════════════════════════════════
 
 const http = require('http');
 const { buildEscalaMessage, buildAlmocoMessage } = require('./utils/messageBuilder');
 const { channels } = require('./config/config');
+
+/**
+ * Converte string ISO 'YYYY-MM-DD' em Date no fuso de Brasília
+ * evitando o problema de UTC que adianta/atrasa 1 dia
+ */
+function parseLocalDate(iso) {
+  if (!iso) return new Date();
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d); // Date local da máquina
+}
 
 function startServer(client) {
   const PORT = process.env.PORT || 3001;
@@ -23,14 +32,14 @@ function startServer(client) {
       res.writeHead(204); res.end(); return;
     }
 
-    // ── Health check (público — não exige auth) ───────
+    // ── Health check (público) ────────────────────────
     if (req.method === 'GET' && req.url === '/health') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ status: 'ok', bot: client.user?.tag || 'conectando...' }));
       return;
     }
 
-    // ── Auth (todas as outras rotas exigem) ───────────
+    // ── Auth ──────────────────────────────────────────
     if (API_SECRET && req.headers['x-api-secret'] !== API_SECRET) {
       res.writeHead(401, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Não autorizado' }));
@@ -43,10 +52,12 @@ function startServer(client) {
       req.on('data', chunk => body += chunk);
       req.on('end', async () => {
         try {
-          const { escalaState } = JSON.parse(body);
+          const { escalaState, data } = JSON.parse(body);
           if (!escalaState) throw new Error('escalaState ausente no body');
 
-          const mensagem = buildEscalaMessage(escalaState, new Date());
+          const date = parseLocalDate(data); // ← usa a data do site
+          const mensagem = buildEscalaMessage(escalaState, date);
+
           if (!mensagem) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Nenhum colaborador com status definido' }));
@@ -61,10 +72,10 @@ function startServer(client) {
           }
 
           await channel.send(mensagem);
-          console.log(`[HERMES] Escala enviada via API para #${channel.name}`);
+          console.log(`[HERMES] Escala (${data}) enviada para #${channel.name}`);
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: true, canal: channel.name }));
+          res.end(JSON.stringify({ ok: true, canal: channel.name, data }));
 
         } catch (err) {
           console.error('[HERMES] Erro em /send/escala:', err);
@@ -81,11 +92,10 @@ function startServer(client) {
       req.on('data', chunk => body += chunk);
       req.on('end', async () => {
         try {
-          const { almocoState } = JSON.parse(body);
-
+          const { almocoState, data } = JSON.parse(body);
           const { COLABORADORES } = require('./config/colaboradores');
-          let lista;
 
+          let lista;
           if (almocoState) {
             lista = COLABORADORES
               .filter(c => almocoState[c.nome]?.done)
@@ -94,7 +104,9 @@ function startServer(client) {
             lista = COLABORADORES;
           }
 
-          const mensagem = buildAlmocoMessage(lista, new Date());
+          const date = parseLocalDate(data); // ← usa a data do site
+          const mensagem = buildAlmocoMessage(lista, date);
+
           if (!mensagem) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Nenhum colaborador marcado para almoço' }));
@@ -109,10 +121,10 @@ function startServer(client) {
           }
 
           await channel.send(mensagem);
-          console.log(`[HERMES] Almoço enviado via API para #${channel.name}`);
+          console.log(`[HERMES] Almoço (${data}) enviado para #${channel.name}`);
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: true, canal: channel.name, colaboradores: lista.length }));
+          res.end(JSON.stringify({ ok: true, canal: channel.name, colaboradores: lista.length, data }));
 
         } catch (err) {
           console.error('[HERMES] Erro em /send/almoco:', err);
