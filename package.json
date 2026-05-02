@@ -1,0 +1,21 @@
+{
+  "name": "hermes-bot",
+  "version": "1.0.0",
+  "description": "Hermes — Mensageiro dos deuses.",
+  "main": "src/index.js",
+  "scripts": {
+    "start":  "node src/index.js",
+    "dev":    "nodemon src/index.js",
+    "deploy": "node src/deploy-commands.js"
+  },
+  "keywords": ["discord", "bot", "pev", "gestao"],
+  "author": "PEV Gestão",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.15.3",
+    "dotenv":     "^16.4.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
