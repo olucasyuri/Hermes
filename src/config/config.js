@@ -6,9 +6,10 @@
 module.exports = {
 
   channels: {
-    escala:   process.env.CHANNEL_ESCALA   || 'ID_DO_CANAL_ESCALA',
-    almoco:   process.env.CHANNEL_ALMOCO   || 'ID_DO_CANAL_ALMOCO',
-    alertas:  process.env.CHANNEL_ALERTAS  || null, // ← canal de alertas do monitor
+    escala:    process.env.CHANNEL_ESCALA    || 'ID_DO_CANAL_ESCALA',
+    almoco:    process.env.CHANNEL_ALMOCO    || 'ID_DO_CANAL_ALMOCO',
+    alertas:   process.env.CHANNEL_ALERTAS   || null,
+    relatorio: process.env.CHANNEL_RELATORIO || null, // ← relatório semanal
   },
 
   timezoneOffset: -3,
