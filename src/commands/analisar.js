@@ -5,7 +5,7 @@
 // ════════════════════════════════════════════════════════
 
 const { SlashCommandBuilder } = require('discord.js');
-const { analisarEscalas }     = require('../utils/gemini');
+const { analisarEscalas } = require('../utils/openai');
 const { getColaboradores, readJSON, LOG_FILE } = require('../server');
 
 module.exports = {
