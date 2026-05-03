@@ -1,63 +1,77 @@
 // ════════════════════════════════════════════════════════
 //  HERMES — Agendador de Tarefas
-//  Carrega e executa tasks automáticas (ex: almoço diário)
+//  Suporta tasks por horário fixo E tasks por intervalo
+//  Arquivo: src/utils/scheduler.js
 // ════════════════════════════════════════════════════════
 
 const fs   = require('fs');
 const path = require('path');
 const { timezoneOffset } = require('../config/config');
 
-/**
- * Retorna o horário atual ajustado para o fuso configurado
- * @returns {{ hora: number, minuto: number, diaSemana: number }}
- */
 function nowBrasilia() {
-  const now     = new Date();
-  const utcMs   = now.getTime() + now.getTimezoneOffset() * 60000;
-  const local   = new Date(utcMs + timezoneOffset * 3600000);
+  const now   = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const local = new Date(utcMs + timezoneOffset * 3600000);
   return {
     hora:      local.getHours(),
     minuto:    local.getMinutes(),
-    diaSemana: local.getDay(), // 0=dom, 1=seg...
+    diaSemana: local.getDay(),
     date:      local,
   };
 }
 
-/**
- * Carrega todas as tasks da pasta /tasks e inicia o loop de verificação
- * @param {import('discord.js').Client} client
- */
 function loadTasks(client) {
   const tasksPath = path.join(__dirname, '../tasks');
   const taskFiles = fs.readdirSync(tasksPath).filter(f => f.endsWith('.js'));
 
-  const tasks = [];
+  const scheduledTasks = []; // disparo por horário fixo
+  const intervalTasks  = []; // disparo por intervalo próprio
+
   for (const file of taskFiles) {
     const task = require(path.join(tasksPath, file));
-    if (task.schedule && task.execute) {
-      tasks.push(task);
-      console.log(`[HERMES] Task agendada: ${task.name || file}`);
+    if (!task.execute) continue;
+
+    if (task.interval) {
+      // Task com intervalo próprio (ex: monitor a cada 2 min)
+      intervalTasks.push(task);
+      console.log(`[HERMES] Task intervalo: ${task.name} (${task.interval / 1000}s)`);
+    } else if (task.schedule) {
+      scheduledTasks.push(task);
+      console.log(`[HERMES] Task agendada: ${task.name}`);
     }
   }
 
-  if (tasks.length === 0) return;
+  // ── Loop de 60s para tasks por horário fixo ──────────
+  if (scheduledTasks.length > 0) {
+    setInterval(() => {
+      const { hora, minuto, diaSemana, date } = nowBrasilia();
+      for (const task of scheduledTasks) {
+        const { dias, hora: h, minuto: m } = task.schedule;
+        if (h === null || m === null) continue; // pula tasks de intervalo que vieram aqui
+        if (hora === h && minuto === m && dias.includes(diaSemana)) {
+          console.log(`[HERMES] Executando: ${task.name}`);
+          task.execute(client, date).catch(err =>
+            console.error(`[HERMES] Erro em ${task.name}:`, err)
+          );
+        }
+      }
+    }, 60 * 1000);
+  }
 
-  // Verifica a cada minuto se alguma task deve executar
-  setInterval(() => {
-    const { hora, minuto, diaSemana, date } = nowBrasilia();
-
-    for (const task of tasks) {
-      const { dias, hora: h, minuto: m } = task.schedule;
-      if (hora === h && minuto === m && dias.includes(diaSemana)) {
-        console.log(`[HERMES] Executando task: ${task.name}`);
+  // ── Loop de 30s para tasks com intervalo próprio ─────
+  if (intervalTasks.length > 0) {
+    setInterval(() => {
+      const date = new Date();
+      for (const task of intervalTasks) {
         task.execute(client, date).catch(err =>
-          console.error(`[HERMES] Erro na task ${task.name}:`, err)
+          console.error(`[HERMES] Erro em ${task.name}:`, err)
         );
       }
-    }
-  }, 60 * 1000); // verifica a cada 60s
+    }, 30 * 1000); // verifica a cada 30s, mas cada task controla seu próprio intervalo interno
+  }
 
-  console.log(`[HERMES] Agendador ativo — ${tasks.length} task(s) monitorada(s)`);
+  const total = scheduledTasks.length + intervalTasks.length;
+  console.log(`[HERMES] Agendador ativo — ${total} task(s) monitorada(s)`);
 }
 
 module.exports = { loadTasks, nowBrasilia };
