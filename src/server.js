@@ -41,26 +41,51 @@ function buildCanalLink(canalNome) {
 }
 
 /**
- * Monta a mensagem DM rica no mesmo estilo do formato anterior.
- * @param {object} dest        — { nome, discord_id }
+ * Monta a mensagem DM no estilo card/bloco (Opção 2).
+ * @param {object} dest    — { nome, discord_id }
  * @param {string} titulo
  * @param {string} mensagem
- * @param {string} canal       — ex: "Processos"
+ * @param {string} canal   — ex: "Processos"
  */
 function buildAvisoContent(dest, titulo, mensagem, canal) {
   const canalLink = buildCanalLink(canal);
-  const saudacao = dest.nome ? `Olá, ${dest.nome.split(" ")[0]}!` : "Olá!";
+  const primeiroNome = dest.nome ? dest.nome.split(" ")[0] : null;
+  const saudacao = primeiroNome ? `Olá, ${primeiroNome}! 👋` : "Olá! 👋";
 
   return [
-    `📣 **Novo aviso publicado**`,
+    `> 📣 **NOVO AVISO PUBLICADO**`,
+    `> Canal: ${canalLink}`,
+    ``,
     saudacao,
     ``,
-    `Foi publicado um novo aviso no canal ${canalLink}.`,
-    ``,
-    `📌 **${titulo}**`,
+    `**📌 ${titulo}**`,
     `${mensagem}`,
     ``,
-    `✅ Após ler, marque o visto no Discord.`,
+    `> ✅ Por favor, leia e marque o visto.`,
+    `> 🔗 [Clique aqui para acessar o canal](https://discord.com/channels/${GUILD_ID}/${CANAL_IDS[canal] || ""})`,
+  ].join("\n");
+}
+
+/**
+ * Monta a mensagem DM de feedback privado.
+ * @param {object} dest
+ * @param {string} titulo
+ * @param {string} mensagem
+ */
+function buildFeedbackContent(dest, titulo, mensagem) {
+  const primeiroNome = dest.nome ? dest.nome.split(" ")[0] : null;
+  const saudacao = primeiroNome ? `Olá, ${primeiroNome}! 👋` : "Olá! 👋";
+
+  return [
+    `> 💬 **FEEDBACK PRIVADO**`,
+    `> Gestão PIT STOP`,
+    ``,
+    saudacao,
+    ``,
+    `**📌 ${titulo || "Novo feedback"}**`,
+    `${mensagem || ""}`,
+    ``,
+    `> 🔒 Esta mensagem é confidencial e destinada apenas a você.`,
   ].join("\n");
 }
 
@@ -112,13 +137,7 @@ function createHermesServer(client) {
         const results = await sendDm(
           client,
           destinatarios,
-          (dest) => [
-            `💬 **Feedback privado**`,
-            dest.nome ? `Olá, ${dest.nome.split(" ")[0]}!` : "",
-            ``,
-            `**${titulo || ""}**`,
-            `${mensagem || ""}`,
-          ].filter(Boolean).join("\n")
+          (dest) => buildFeedbackContent(dest, titulo, mensagem)
         );
         return sendJson(res, 200, { ok: true, tipo, results });
       }
@@ -155,13 +174,7 @@ function createHermesServer(client) {
           const results = await sendDm(
             client,
             destinatarios,
-            (dest) => [
-              `💬 **Feedback privado**`,
-              dest.nome ? `Olá, ${dest.nome.split(" ")[0]}!` : "",
-              ``,
-              `**${titulo || ""}**`,
-              `${mensagem || ""}`,
-            ].filter(Boolean).join("\n")
+            (dest) => buildFeedbackContent(dest, titulo, mensagem)
           );
           return sendJson(res, 200, { ok: true, tipo, results });
         }
