@@ -1,5 +1,12 @@
 const http = require("node:http");
 
+// ── Mapa de canais Discord ────────────────────────────────
+const GUILD_ID = "663150267939684397";
+const CANAL_IDS = {
+  "Processos": "1485642710085013604",
+  "Avisos":    "1407346681309167698",
+};
+
 function readJson(req) {
   return new Promise((resolve, reject) => {
     let body = "";
@@ -22,12 +29,47 @@ function assertSecret(req) {
   return expected && received === expected;
 }
 
-async function sendDm(client, destinatarios, content) {
+/**
+ * Monta o link clicável para o canal do Discord.
+ * @param {string} canalNome  — ex: "Processos"
+ * @returns {string}
+ */
+function buildCanalLink(canalNome) {
+  const canalId = CANAL_IDS[canalNome];
+  if (!canalId) return `**#${canalNome}**`;
+  return `[#${canalNome}](https://discord.com/channels/${GUILD_ID}/${canalId})`;
+}
+
+/**
+ * Monta a mensagem DM rica no mesmo estilo do formato anterior.
+ * @param {object} dest        — { nome, discord_id }
+ * @param {string} titulo
+ * @param {string} mensagem
+ * @param {string} canal       — ex: "Processos"
+ */
+function buildAvisoContent(dest, titulo, mensagem, canal) {
+  const canalLink = buildCanalLink(canal);
+  const saudacao = dest.nome ? `Olá, ${dest.nome.split(" ")[0]}!` : "Olá!";
+
+  return [
+    `📣 **Novo aviso publicado**`,
+    saudacao,
+    ``,
+    `Foi publicado um novo aviso no canal ${canalLink}.`,
+    ``,
+    `📌 **${titulo}**`,
+    `${mensagem}`,
+    ``,
+    `✅ Após ler, marque o visto no Discord.`,
+  ].join("\n");
+}
+
+async function sendDm(client, destinatarios, buildContent) {
   const results = [];
   for (const dest of destinatarios || []) {
     try {
       const user = await client.users.fetch(dest.discord_id || dest.discordId);
-      await user.send(content);
+      await user.send(buildContent(dest));
       results.push({ nome: dest.nome, ok: true });
     } catch (error) {
       results.push({ nome: dest.nome, ok: false, error: error.message });
@@ -56,14 +98,28 @@ function createHermesServer(client) {
       }
 
       if (tipo === "novo-aviso") {
-        const content = `📣 **${body.titulo || "Novo aviso"}**\n${body.mensagem || ""}\n\nCanal: ${body.canal || "Avisos"}`;
-        const results = await sendDm(client, body.destinatarios, content);
+        const { titulo, mensagem, canal, destinatarios } = body;
+        const results = await sendDm(
+          client,
+          destinatarios,
+          (dest) => buildAvisoContent(dest, titulo, mensagem, canal)
+        );
         return sendJson(res, 200, { ok: true, tipo, results });
       }
 
       if (tipo === "feedback-privado") {
-        const content = `💬 **Feedback privado**\n**${body.titulo || ""}**\n${body.mensagem || ""}`;
-        const results = await sendDm(client, body.destinatarios, content);
+        const { titulo, mensagem, destinatarios } = body;
+        const results = await sendDm(
+          client,
+          destinatarios,
+          (dest) => [
+            `💬 **Feedback privado**`,
+            dest.nome ? `Olá, ${dest.nome.split(" ")[0]}!` : "",
+            ``,
+            `**${titulo || ""}**`,
+            `${mensagem || ""}`,
+          ].filter(Boolean).join("\n")
+        );
         return sendJson(res, 200, { ok: true, tipo, results });
       }
 
@@ -85,14 +141,28 @@ function createHermesServer(client) {
         const body = await readJson(req);
 
         if (tipo === "novo-aviso") {
-          const content = `📣 **${body.titulo || "Novo aviso"}**\n${body.mensagem || ""}\n\nCanal: ${body.canal || "Avisos"}`;
-          const results = await sendDm(client, body.destinatarios, content);
+          const { titulo, mensagem, canal, destinatarios } = body;
+          const results = await sendDm(
+            client,
+            destinatarios,
+            (dest) => buildAvisoContent(dest, titulo, mensagem, canal)
+          );
           return sendJson(res, 200, { ok: true, tipo, results });
         }
 
         if (tipo === "feedback-privado") {
-          const content = `💬 **Feedback privado**\n**${body.titulo || ""}**\n${body.mensagem || ""}`;
-          const results = await sendDm(client, body.destinatarios, content);
+          const { titulo, mensagem, destinatarios } = body;
+          const results = await sendDm(
+            client,
+            destinatarios,
+            (dest) => [
+              `💬 **Feedback privado**`,
+              dest.nome ? `Olá, ${dest.nome.split(" ")[0]}!` : "",
+              ``,
+              `**${titulo || ""}**`,
+              `${mensagem || ""}`,
+            ].filter(Boolean).join("\n")
+          );
           return sendJson(res, 200, { ok: true, tipo, results });
         }
 
