@@ -2,13 +2,12 @@
 //  HERMES BOT — Entry Point (com servidor HTTP integrado)
 //  Substitui o src/index.js original
 // ════════════════════════════════════════════════════════
-
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const fs   = require('fs');
 const path = require('path');
-const { loadTasks }   = require('./utils/scheduler');
-const { startServer } = require('./server'); // ← NOVO
+const { loadTasks }        = require('./utils/scheduler');
+const { createHermesServer } = require('./server'); // ← CORRIGIDO
 
 // ─── Client ─────────────────────────────────────────────
 const client = new Client({
@@ -23,7 +22,6 @@ const client = new Client({
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'));
-
 for (const file of commandFiles) {
   const command = require(path.join(commandsPath, file));
   if (command.data && command.execute) {
@@ -45,7 +43,7 @@ client.once('ready', async () => {
   }
 
   try {
-    startServer(client);
+    createHermesServer(client); // ← CORRIGIDO
     console.log("[HERMES] Servidor HTTP iniciado.");
   } catch (err) {
     console.error("[HERMES] Erro ao iniciar servidor HTTP:", err);
@@ -65,6 +63,7 @@ client.on('interactionCreate', async interaction => {
     else await interaction.reply(reply);
   }
 });
+
 process.on("unhandledRejection", (err) => {
   console.error("[HERMES] Unhandled rejection:", err);
 });
