@@ -33,11 +33,23 @@ for (const file of commandFiles) {
 }
 
 // ─── Eventos ─────────────────────────────────────────────
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log(`\n⚡ Hermes online como ${client.user.tag}`);
   console.log(`📡 ${client.guilds.cache.size} servidor(es)\n`);
-  loadTasks(client);
-  startServer(client); // ← Inicia HTTP após bot conectar
+
+  try {
+    loadTasks(client);
+    console.log("[HERMES] Tasks carregadas.");
+  } catch (err) {
+    console.error("[HERMES] Erro ao carregar tasks:", err);
+  }
+
+  try {
+    startServer(client);
+    console.log("[HERMES] Servidor HTTP iniciado.");
+  } catch (err) {
+    console.error("[HERMES] Erro ao iniciar servidor HTTP:", err);
+  }
 });
 
 client.on('interactionCreate', async interaction => {
@@ -52,6 +64,13 @@ client.on('interactionCreate', async interaction => {
     if (interaction.replied || interaction.deferred) await interaction.followUp(reply);
     else await interaction.reply(reply);
   }
+});
+process.on("unhandledRejection", (err) => {
+  console.error("[HERMES] Unhandled rejection:", err);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("[HERMES] Uncaught exception:", err);
 });
 
 client.login(process.env.DISCORD_TOKEN);
