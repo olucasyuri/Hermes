@@ -365,12 +365,12 @@ function stepOp() {
         .setCustomId('fiscal_diag_op')
         .setPlaceholder('Selecione o tipo de operação')
         .addOptions([
-          new StringSelectMenuOptionBuilder().setLabel('Venda dentro do estado').setValue('venda_estado').setEmoji('🏪'),
-          new StringSelectMenuOptionBuilder().setLabel('Venda para outro estado').setValue('venda_inter').setEmoji('🚚'),
-          new StringSelectMenuOptionBuilder().setLabel('Devolução — mesmo estado').setValue('dev_estado'),
-          new StringSelectMenuOptionBuilder().setLabel('Devolução — outro estado').setValue('dev_inter'),
-          new StringSelectMenuOptionBuilder().setLabel('Remessa conserto / garantia').setValue('remessa').setEmoji('🔧')
-          new StringSelectMenuOptionBuilder().setLabel('Transferência entre filiais').setValue('transferencia'),
+         new StringSelectMenuOptionBuilder().setLabel('Venda dentro do estado').setValue('venda_estado').setEmoji('🏪'),
+         new StringSelectMenuOptionBuilder().setLabel('Venda para outro estado').setValue('venda_inter').setEmoji('🚚'),
+         new StringSelectMenuOptionBuilder().setLabel('Devolucao — mesmo estado').setValue('dev_estado'),
+         new StringSelectMenuOptionBuilder().setLabel('Devolucao — outro estado').setValue('dev_inter'),
+         new StringSelectMenuOptionBuilder().setLabel('Remessa conserto / garantia').setValue('remessa').setEmoji('🔧'),
+         new StringSelectMenuOptionBuilder().setLabel('Transferencia entre filiais').setValue('transferencia'),
         ])
     )],
   };
