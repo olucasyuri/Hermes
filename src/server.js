@@ -223,6 +223,37 @@ async function handleTipo(client, tipo, body) {
     return { ok: true, tipo, results };
   }
 
+  // ── pev-escala: envia a escala do PEV para um canal de texto do Discord ──
+  if (tipo === "pev-escala" || tipo === "pev-almoco") {
+    const { mensagem, content, channelId } = body;
+    const texto = mensagem || content;
+    if (!texto) throw Object.assign(new Error("Campo 'mensagem' ou 'content' obrigatório"), { statusCode: 400 });
+
+    // Prioridade: channelId enviado pelo site → variável de ambiente → fallback
+    const alvoId =
+      channelId ||
+      (tipo === "pev-almoco"
+        ? process.env.CHANNEL_PEV_ALMOCO || process.env.CHANNEL_ALMOCO
+        : process.env.CHANNEL_PEV_ESCALA || process.env.CHANNEL_ESCALA);
+
+    if (!alvoId || alvoId === "ID_DO_CANAL_ESCALA" || alvoId === "ID_DO_CANAL_ALMOCO") {
+      throw Object.assign(
+        new Error(
+          `Canal não configurado. Defina ${tipo === "pev-almoco" ? "CHANNEL_PEV_ALMOCO" : "CHANNEL_PEV_ESCALA"} no .env do Hermes, ou envie 'channelId' no payload.`
+        ),
+        { statusCode: 500 }
+      );
+    }
+
+    const channel = await client.channels.fetch(alvoId).catch(() => null);
+    if (!channel) {
+      throw Object.assign(new Error(`Canal ${alvoId} não encontrado. Verifique o ID e as permissões do bot.`), { statusCode: 404 });
+    }
+
+    await channel.send(texto);
+    return { ok: true, tipo, channelId: alvoId };
+  }
+
   throw Object.assign(new Error("Tipo não suportado"), { statusCode: 400, tipo });
 }
 

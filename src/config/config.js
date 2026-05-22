@@ -6,10 +6,12 @@
 module.exports = {
 
   channels: {
-    escala:    process.env.CHANNEL_ESCALA    || 'ID_DO_CANAL_ESCALA',
-    almoco:    process.env.CHANNEL_ALMOCO    || 'ID_DO_CANAL_ALMOCO',
-    alertas:   process.env.CHANNEL_ALERTAS   || null,
-    relatorio: process.env.CHANNEL_RELATORIO || null, // ← relatório semanal
+    escala:     process.env.CHANNEL_ESCALA      || 'ID_DO_CANAL_ESCALA',
+    almoco:     process.env.CHANNEL_ALMOCO      || 'ID_DO_CANAL_ALMOCO',
+    alertas:    process.env.CHANNEL_ALERTAS     || null,
+    relatorio:  process.env.CHANNEL_RELATORIO   || null, // ← relatório semanal
+    pevEscala:  process.env.CHANNEL_PEV_ESCALA  || process.env.CHANNEL_ESCALA || null, // ← escala enviada pelo site
+    pevAlmoco:  process.env.CHANNEL_PEV_ALMOCO  || process.env.CHANNEL_ALMOCO || null, // ← almoço enviado pelo site
   },
 
   timezoneOffset: -3,
