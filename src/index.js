@@ -21,7 +21,7 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages,
   ],
-  partials: [Partials.Channel],
+  partials: [Partials.Channel, Partials.Message, Partials.User],
 });
 
 // ─── Comandos ────────────────────────────────────────────
@@ -76,6 +76,26 @@ client.on('interactionCreate', async interaction => {
       console.error('[HERMES] Erro em componente fiscal:', err);
       if (!interaction.replied && !interaction.deferred)
         await interaction.reply({ content: '❌ Erro ao processar. Tente novamente.', ephemeral: true });
+    }
+  }
+
+  // ── Botões da confirmação de /solicitacao-migracao (vêm via DM) ──
+  // O próprio collector no comando trata esses botões — nada a fazer aqui.
+  // Este bloco existe apenas para evitar "Unknown interaction" em logs.
+});
+
+// ─── Mensagens DM (para /solicitacao-migracao) ───────────
+client.on('messageCreate', async message => {
+  if (message.author.bot) return;
+  if (!message.channel.isDMBased()) return;
+
+  // Roteia para o handler do comando de migração (se houver sessão ativa)
+  const migracaoCmd = client.commands.get('solicitacao-migracao');
+  if (migracaoCmd?.handleDMMessage) {
+    try {
+      await migracaoCmd.handleDMMessage(message);
+    } catch (err) {
+      console.error('[HERMES] Erro em DM migracao:', err);
     }
   }
 });
