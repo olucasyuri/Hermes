@@ -74,10 +74,21 @@ function norm(v) {
 }
 
 // ─── Envia para o site ───────────────────────────────────
-async function enviarParaSite(respostas, discordUser) {
+async function enviarParaSite(respostas, interaction_or_user) {
   const SITE_URL = process.env.SITE_URL;
   const API_SECRET = process.env.API_SECRET;
   if (!SITE_URL) throw new Error('SITE_URL não configurado no .env do Hermes.');
+
+  // Suporta tanto objeto User do Discord quanto string legada
+  const discordUser  = typeof interaction_or_user === 'string'
+    ? interaction_or_user
+    : (interaction_or_user?.username || '');
+  const discordNome  = typeof interaction_or_user === 'string'
+    ? interaction_or_user
+    : (interaction_or_user?.globalName || interaction_or_user?.displayName || interaction_or_user?.username || '');
+  const discordId    = typeof interaction_or_user === 'string'
+    ? ''
+    : (interaction_or_user?.id || '');
 
   const res = await fetch(`${SITE_URL.replace(/\/$/, '')}/api/pev-importacao`, {
     method: 'POST',
@@ -85,7 +96,12 @@ async function enviarParaSite(respostas, discordUser) {
       'Content-Type': 'application/json',
       ...(API_SECRET ? { 'x-api-secret': API_SECRET } : {}),
     },
-    body: JSON.stringify({ ...respostas, discord_user: discordUser }),
+    body: JSON.stringify({
+      ...respostas,
+      discord_user: discordUser,
+      discord_nome: discordNome,
+      discord_id:   discordId,
+    }),
   });
 
   const data = await res.json().catch(() => ({}));
@@ -190,7 +206,7 @@ async function processarMensagem(message) {
     await btn.update({ content: '⏳ Registrando no painel de gestão...', embeds: [], components: [] });
 
     try {
-      await enviarParaSite(sessao.respostas, nomeDiscord);
+      await enviarParaSite(sessao.respostas, message.author);
       await message.channel.send({
         embeds: [
           new EmbedBuilder()

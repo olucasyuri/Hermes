@@ -150,6 +150,50 @@ function buildAniversarioContent(dest, mensagem) {
   ].join("\n");
 }
 
+
+function buildImportacaoStatusContent(dest, dados = {}) {
+  const primeiroNome = getPrimeiroNome(dest);
+  const aprovado     = dados.status === 'aprovado';
+  const emoji        = aprovado ? '✅' : '❌';
+  const titulo       = aprovado
+    ? '✅ SOLICITAÇÃO DE MIGRAÇÃO APROVADA'
+    : '❌ SOLICITAÇÃO DE MIGRAÇÃO REPROVADA';
+
+  const linhas = [
+    `> ${emoji} **${titulo}**`,
+    `> Gestão PEV`,
+    ``,
+    `Olá, ${primeiroNome}! 👋`,
+    ``,
+    `Sua solicitação de **migração de dados** foi analisada pela equipe.`,
+    ``,
+    `**🏢 Empresa:** ${dados.empresa || '—'}`,
+    `**🔢 CNPJ:** ${dados.cnpj || '—'}`,
+  ];
+
+  if (dados.data_virada) {
+    const [y, m, d] = (dados.data_virada || '').split('-');
+    const dataFmt = (d && m && y) ? `${d}/${m}/${y}` : dados.data_virada;
+    linhas.push(`**📅 Virada do sistema:** ${dataFmt}`);
+  }
+
+  linhas.push('');
+
+  if (aprovado) {
+    linhas.push(
+      `**${emoji} Status: APROVADO**`,
+      ``,
+      `> ✅ A equipe responsável entrará em contato para dar continuidade ao processo.`,
+    );
+  } else {
+    linhas.push(`**${emoji} Status: REPROVADO**`);
+    if (dados.motivo) linhas.push(`**💬 Motivo:** ${dados.motivo}`);
+    linhas.push('', `> ℹ️ Em caso de dúvidas, entre em contato com a gestão.`);
+  }
+
+  return linhas.join('\n');
+}
+
 async function sendDm(client, destinatarios, buildContent) {
   const results = [];
 
@@ -254,7 +298,17 @@ async function handleTipo(client, tipo, body) {
     return { ok: true, tipo, channelId: alvoId };
   }
 
-  throw Object.assign(new Error("Tipo não suportado"), { statusCode: 400, tipo });
+  // ── pev-importacao-status: notifica colaborador sobre aprovação/reprovação ──
+  if (tipo === "pev-importacao-status") {
+    const { discord_id, discord_nome, discord_user, status, empresa, cnpj, data_virada, motivo } = body;
+    if (!discord_id) throw Object.assign(new Error("discord_id obrigatório para pev-importacao-status"), { statusCode: 400 });
+    const destinatarios = [{ nome: discord_nome || discord_user || "colaborador", discord_id }];
+    const dados = { status, empresa, cnpj, data_virada, motivo };
+    const results = await sendDm(client, destinatarios, dest => buildImportacaoStatusContent(dest, dados));
+    return { ok: true, tipo, results };
+  }
+
+    throw Object.assign(new Error("Tipo não suportado"), { statusCode: 400, tipo });
 }
 
 function createHermesServer(client) {
