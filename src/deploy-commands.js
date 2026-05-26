@@ -23,20 +23,25 @@ for (const file of commandFiles) {
 
 const rest = new REST().setToken(process.env.DISCORD_TOKEN);
 
+// Adicione novos servidores como GUILD_ID_3, GUILD_ID_4... no .env e aqui no array
+const GUILD_IDS = [
+  process.env.GUILD_ID,
+  process.env.GUILD_ID_2,
+].filter(Boolean); // ignora entradas vazias/undefined
+
 (async () => {
   try {
-    console.log(`\n[DEPLOY] Registrando ${commands.length} comando(s)...`);
+    console.log(`\n[DEPLOY] Registrando ${commands.length} comando(s) em ${GUILD_IDS.length} servidor(es)...`);
 
-    await rest.put(
-      Routes.applicationGuildCommands(
-        process.env.CLIENT_ID,
-        process.env.GUILD_ID,
-      ),
-      { body: commands },
-    );
+    for (const guildId of GUILD_IDS) {
+      await rest.put(
+        Routes.applicationGuildCommands(process.env.CLIENT_ID, guildId),
+        { body: commands },
+      );
+      console.log(`[DEPLOY] ✅ Servidor ${guildId} — OK`);
+    }
 
-    console.log(`[DEPLOY] ✅ Comandos registrados com sucesso!\n`);
-    console.log('Comandos disponíveis:');
+    console.log('\nComandos disponíveis:');
     commands.forEach(c => console.log(`  /${c.name} — ${c.description}`));
 
   } catch (err) {
